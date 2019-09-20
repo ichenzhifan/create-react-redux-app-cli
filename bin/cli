@@ -1,0 +1,32 @@
+#!/usr/bin/env node
+
+const path = require('path');
+const program = require('commander');
+program
+  .version(require('../package.json').version, '-v, --version');
+
+program
+  .command('create <ProjectName>')
+  .description('Create a new Project')
+  .action(async (projectName) => {
+    // 1. clone项目
+    const { clone } = require('../lib/download');
+    console.log('🚀创建项目: ' + projectName);
+    await clone('github.com:ichenzhifan/react-redux-base', projectName);
+    console.log(`项目${projectName}创建成功`);
+
+    // 2. 安装依赖
+    console.log('Installing packages...')
+    
+    // 将node工作目录更改成构建的项目根目录下
+    const projectPath = path.resolve(projectName);
+    process.chdir(projectPath);
+ 
+    // 执行安装命令
+    require('../lib/install');
+
+    // 3. 启动调试
+    // require('../lib/run');
+  })
+
+program.parse(process.argv);
