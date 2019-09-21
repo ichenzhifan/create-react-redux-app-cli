@@ -2,31 +2,73 @@
 
 const path = require('path');
 const program = require('commander');
+const inquirer = require('inquirer');
+const { updateFile } = require('../lib/file');
+const { install } = require('../lib/install');
+
+const prompt = () => {
+  return inquirer.prompt([
+    {
+      type: 'input',
+      name: 'author',
+      message: '请输入作者的名称'
+    },
+    {
+      type: 'input',
+      name: 'repository',
+      message: '请输入GitHub的项目地址'
+    },
+    {
+      type: 'confirm',
+      name: 'isOk',
+      message: '请确认输入是否ok?'
+    }
+  ])
+};
+
 program
   .version(require('../package.json').version, '-v, --version');
 
 program
   .command('create <ProjectName>')
-  .description('Create a new Project')
-  .action(async (projectName) => {
-    // 1. clone项目
-    const { clone } = require('../lib/download');
-    console.log('🚀创建项目: ' + projectName);
-    await clone('github.com:ichenzhifan/react-redux-base', projectName);
-    console.log(`项目${projectName}创建成功`);
+  .description('创建一个新项目')
+  .action((projectName) => {
+    prompt().then(async (results) => {
+      console.log(results)
+      const { author, repository, isOk } = results;
+      if (!isOk) {
+        return;
+      }
 
-    // 2. 安装依赖
-    console.log('Installing packages...')
-    
-    // 将node工作目录更改成构建的项目根目录下
-    const projectPath = path.resolve(projectName);
-    process.chdir(projectPath);
- 
-    // 执行安装命令
-    require('../lib/install');
+      // 1. clone项目
+      const { clone } = require('../lib/download');
+      console.log('🚀创建项目: ' + projectName);
+      await clone('github.com:ichenzhifan/react-redux-base', projectName);
+      console.log(`项目${projectName}创建成功`);
 
-    // 3. 启动调试
-    // require('../lib/run');
+      // 2. 更新package.json的配置.
+      const packageJson = path.join(path.resolve(projectName), 'package.json');
+      const repositoryObj = repository ? {
+        type: "git",
+        url: repository
+      } : {};
+
+      updateFile(packageJson, {
+        name: projectName,
+        author,
+        repository: repositoryObj
+      });
+
+      // 3. 安装依赖
+      console.log('安装依赖...')
+
+      // 将node工作目录更改成构建的项目根目录下
+      const projectPath = path.resolve(projectName);
+      process.chdir(projectPath);
+
+      // 执行安装命令
+      install();
+    });
   })
 
 program.parse(process.argv);
